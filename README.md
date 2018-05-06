@@ -29,7 +29,7 @@ Then in your `update` function we can extract the `FileReceived` message payload
                 in                
                 ( model, Cmd.none ) 
 
-**Note**: The *file key* can be extracted from any Figma file URL: `https://www.figma.com/file/:key/:title`, or via the `getProjectFiles` function.
+**Note**: The key can be extracted from any Figma file URL: `https://www.figma.com/file/:key/:title`, or via the `getProjectFiles` function.
 
 
 ## Export a document node to PNG
@@ -43,12 +43,10 @@ Here we start a request to export the node with ID `1:6` into a PNG file.
         [ "1:6" ]
  
 
-## To-do 
-
-Missign pieces:
+## Missing pieces 
 
 * Layout grids
 * Document versions
-* `TyepStyle.styleOverrideTable`
 * Export geometry data
 
+If you need any of these features please open an issue.
