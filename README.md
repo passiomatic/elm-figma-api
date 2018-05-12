@@ -2,14 +2,13 @@
 
 This package aims to provide a typed, Elm-friendly access to the Figma web API.
 
-The API currently supports view-level operations on Figma files. Given a file, you can inspect an Elm representation
-of it or export any node subtree within the file as an image. 
+The API currently supports view-level operations on Figma files. Given a file, you can inspect its Elm representation, read or post comments, or export a rendered image of any node subtree. 
 
 [Read the orginal Figma API specification](https://www.figma.com/developers/docs).
 
 ## Get a document file
 
-First, let's create a authentication token – [see here](https://www.figma.com/developers/docs#auth-dev-token) – and pass that to the `getFile` function, together with the file key we want to retrieve.
+First, let's create a authentication token and pass that to the `getFile` function, together with the file key we want to retrieve.
 
     import Figma as F 
 
@@ -18,7 +17,7 @@ First, let's create a authentication token – [see here](https://www.figma.com/
         "your-file-key"
         FileReceived
 
-Then in your `update` function we can extract the `FileReceived` message payloadand store it in the model app:
+Then in the `update` function we can extract the `FileReceived` message payloadand store it in the model app:
 
     FileReceived result ->         
 
@@ -32,7 +31,7 @@ Then in your `update` function we can extract the `FileReceived` message payload
                 in                
                 ( model, Cmd.none ) 
 
-**Note**: The key can be extracted from any Figma file URL: `https://www.figma.com/file/:key/:title`, or via the `getProjectFiles` function.
+**Note**: The key can be extracted from any Figma file URL: `https://www.figma.com/file/:key/:title`, or via the `getFiles` function.
 
 
 ## Export a document node to PNG
@@ -45,7 +44,7 @@ Here we start a request to export the node with ID `1:6` into a PNG file.
         ExportFinished 
         [ "1:6" ]
  
-The `ExportFinished` message will contain `ExportData`, a list of URL's for the rendered images. 
+Once finished the `ExportFinished` message will contain a list of `ExportedImage`, containing URL's for the rendered images. 
 
 ## Missing pieces 
 
