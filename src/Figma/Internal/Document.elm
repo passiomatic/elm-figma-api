@@ -3,7 +3,6 @@ module Figma.Internal.Document
         ( treeDecoder
         )
 
---import Dict exposing (Dict)
 import Json.Decode as D exposing (Decoder)
 import Json.Decode.Pipeline as D
 import Figma.Document exposing (..)
@@ -126,7 +125,7 @@ frameNodeFields =
         >> D.optional "opacity" D.float 1
         >> D.required "absoluteBoundingBox" boundingBoxDecoder
         >> D.required "clipsContent" D.bool
-        -->> D.optional "layoutGrids" D.list  TODO
+        >> D.optional "layoutGrids" (D.list gridDecoder) []
         >> D.optional "effects" (D.list effectDecoder) []
         >> D.optional "isMask" D.bool False
 
@@ -156,6 +155,7 @@ groupDecoder =
         |> D.optional "opacity" D.float 1
         |> D.required "absoluteBoundingBox" boundingBoxDecoder
         |> D.required "clipsContent" D.bool
+        |> D.optional "layoutGrids" (D.list gridDecoder) []        
         |> D.optional "effects" (D.list effectDecoder) []
         |> D.optional "isMask" D.bool False
 

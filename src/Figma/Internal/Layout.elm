@@ -2,6 +2,7 @@ module Figma.Internal.Layout
     exposing
         ( verticalConstraintDecoder
         , horizontalConstraintDecoder
+        , gridDecoder
         )
 
 import Json.Decode as D exposing (Decoder)
@@ -13,6 +14,26 @@ import Figma.Internal.Appearance exposing (..)
 -- GRIDS
 
 
+gridDecoder : Decoder LayoutGrid
+gridDecoder =
+    D.field "pattern" D.string
+        |> D.andThen
+            (\value ->
+                case value of
+                    "COLUMNS" ->
+                        D.map ColumnsGrid columnsGridDecoder
+
+                    "ROWS" ->
+                        D.map RowsGrid rowsGridDecoder
+
+                    "GRID" ->
+                        D.map SquareGrid squareGridDecoder
+
+                    _ ->
+                        D.fail <| "Unrecognized grid pattern value: " ++ value
+            )
+
+
 columnsGridDecoder : Decoder Columns
 columnsGridDecoder =
     D.decode Columns
@@ -22,7 +43,7 @@ columnsGridDecoder =
         |> D.required "gutterSize" D.float
         |> D.required "offset" D.float
         |> D.required "count" D.int
-        |> D.required "alignment" horizontalAlignDecoder
+        |> D.required "alignment" alignDecoder
 
 
 rowsGridDecoder : Decoder Rows
@@ -34,43 +55,31 @@ rowsGridDecoder =
         |> D.required "gutterSize" D.float
         |> D.required "offset" D.float
         |> D.required "count" D.int
-        |> D.required "alignment" verticalAlignDecoder
+        |> D.required "alignment" alignDecoder
 
 
-horizontalAlignDecoder : Decoder GridHorizontalAlign
-horizontalAlignDecoder =
+squareGridDecoder : Decoder Grid
+squareGridDecoder =
+    D.decode Grid
+        |> D.required "sectionSize" D.float
+        |> D.required "visible" D.bool
+        |> D.required "color" colorDecoder
+
+
+alignDecoder : Decoder GridAlign
+alignDecoder =
     D.string
         |> D.andThen
             (\value ->
                 case value of
                     "MIN" ->
-                        D.succeed LeftAlign
+                        D.succeed MinAlign
 
-                    "MAX" ->
-                        D.succeed RightAlign
-
-                    "CENTER" ->
-                        D.succeed CenterHorizontalAlign
-
-                    value ->
-                        D.fail <| "Unrecognized grid align value: " ++ value
-            )
-
-
-verticalAlignDecoder : Decoder GridVerticalAlign
-verticalAlignDecoder =
-    D.string
-        |> D.andThen
-            (\value ->
-                case value of
-                    "MIN" ->
-                        D.succeed TopAlign
-
-                    "MAX" ->
-                        D.succeed BottomAlign
+                    "STRETCH" ->
+                        D.succeed MaxAlign
 
                     "CENTER" ->
-                        D.succeed CenterVerticalAlign
+                        D.succeed CenterAlign
 
                     value ->
                         D.fail <| "Unrecognized grid align value: " ++ value

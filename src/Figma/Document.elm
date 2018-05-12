@@ -202,8 +202,7 @@ type alias Frame =
     , opacity : Float
     , boundingBox : BoundingBox
     , clipContent : Bool
-
-    -- , layoutGrids : List LayoutGrid
+    , layoutGrids : List LayoutGrid
     , effects : List Effect
     , isMask : Bool
     }
@@ -229,6 +228,7 @@ type alias Group =
     , opacity : Float
     , boundingBox : BoundingBox
     , clipContent : Bool
+    , layoutGrids : List LayoutGrid
     , effects : List Effect
     , isMask : Bool
     }
@@ -358,8 +358,7 @@ type alias Instance =
     , opacity : Float
     , boundingBox : BoundingBox
     , clipContent : Bool
-
-    -- , layoutGrids : List LayoutGrid
+    , layoutGrids : List LayoutGrid
     , effects : List Effect
     , isMask : Bool
     , componentId : NodeId

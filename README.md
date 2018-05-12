@@ -49,7 +49,6 @@ The `ExportFinished` message will contain `ExportData`, a list of URL's for the 
 
 ## Missing pieces 
 
-* Layout grids
 * Document versions
 * Export geometry data
 

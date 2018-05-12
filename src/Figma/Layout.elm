@@ -6,8 +6,7 @@ module Figma.Layout
         , Columns
         , Rows
         , Grid
-        , GridVerticalAlign(..)
-        , GridHorizontalAlign(..)
+        , GridAlign(..)
         )
 
 {-|
@@ -20,61 +19,64 @@ module Figma.Layout
 
 # Grids
 
-@docs LayoutGrid, Columns, Rows, Grid, GridHorizontalAlign, GridVerticalAlign
+@docs LayoutGrid, Columns, Rows, Grid, GridAlign
 
 -}
 
 import Color exposing (Color)
 
 
-{-| -}
+{-| Guides to align and place objects within a parent container. 
+-}
 type LayoutGrid
     = ColumnsGrid Columns
     | RowsGrid Rows
     | SquareGrid Grid
 
 
-{-| -}
-type GridVerticalAlign
-    = TopAlign
-    | BottomAlign
-    | CenterVerticalAlign
+{-| Positioning of grid within the parent container.
+
+  - `MinAlign`: grid starts at the top (or left) of the container, filling the minimun space possible. The margin is applied before the grid.
+  - `CenterAlign`: grid is center aligned. Margin value is ignored.
+  - `MaxAlign`: grid stretches from the top (or left) to the bottom (or right) of the container, filling the maximun space possible. The margin is applied before and after the grid.
+
+-}
+type GridAlign
+    = MinAlign  
+    | CenterAlign
+    | MaxAlign  
 
 
-{-| -}
-type GridHorizontalAlign
-    = LeftAlign
-    | RightAlign
-    | CenterHorizontalAlign
-
-
-{-| -}
+{-| A vertical grid made of columns. 
+-}
 type alias Columns =
     { width : Float
     , isVisible : Bool
     , color : Color
     , gutter : Float
-    , marginBefore : Float
+    , margin : Float  
     , count : Int
-    , align : GridHorizontalAlign
+    , align : GridAlign
     }
 
 
-{-| -}
+{-| A horizontal grid made of rows. 
+-}
 type alias Rows =
     { height : Float
     , isVisible : Bool
     , color : Color
     , gutter : Float
-    , marginBefore : Float
+    , margin : Float 
     , count : Int
-    , align : GridVerticalAlign
+    , align : GridAlign
     }
 
 
-{-| -}
+{-| A square grid. 
+-}
 type alias Grid =
-    { width : Float -- TODO : Size
+    { width : Float
     , isVisible : Bool
     , color : Color
     }
