@@ -286,8 +286,9 @@ paintDecoder =
                     "IMAGE" ->
                         D.map ImagePaint imageDecoder
 
-                    -- "EMOJI" ->
-                    --     D.map EmojiPaint
+                    "EMOJI" ->
+                        D.succeed EmojiPaint
+
                     _ ->
                         D.fail <| "Unsupported paint type: " ++ hint
             )
@@ -301,6 +302,7 @@ solidColorDecoder =
         |> D.required "color" colorDecoder
         |> D.required "blendMode" blendModeDecoder
 
+
 gradientDecoder : Decoder Gradient
 gradientDecoder =
     D.decode Gradient
@@ -311,6 +313,7 @@ gradientDecoder =
         |> D.required "gradientHandlePositions" (D.index 2 vec2Decoder)
         |> D.required "gradientStops" (D.list colorStopDecoder)
         |> D.required "blendMode" blendModeDecoder
+
 
 imageDecoder : Decoder Image
 imageDecoder =

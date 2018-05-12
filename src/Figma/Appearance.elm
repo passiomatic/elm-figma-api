@@ -186,7 +186,7 @@ type Paint
     | LinearGradientPaint Gradient
     | RadialGradientPaint Gradient
     | AngularGradientPaint Gradient
-      --| EmojiPaint -- TODO
+    | EmojiPaint
     | DiamondGradientPaint Gradient
 
 
