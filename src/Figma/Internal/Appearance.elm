@@ -299,16 +299,18 @@ solidColorDecoder =
         |> D.optional "visible" D.bool True
         |> D.optional "opacity" D.float 1.0
         |> D.required "color" colorDecoder
-
+        |> D.required "blendMode" blendModeDecoder
 
 gradientDecoder : Decoder Gradient
 gradientDecoder =
     D.decode Gradient
         |> D.optional "visible" D.bool True
         |> D.optional "opacity" D.float 1.0
-        |> D.required "gradientHandlePositions" (D.list vec2Decoder)
+        |> D.required "gradientHandlePositions" (D.index 0 vec2Decoder)
+        |> D.required "gradientHandlePositions" (D.index 1 vec2Decoder)
+        |> D.required "gradientHandlePositions" (D.index 2 vec2Decoder)
         |> D.required "gradientStops" (D.list colorStopDecoder)
-
+        |> D.required "blendMode" blendModeDecoder
 
 imageDecoder : Decoder Image
 imageDecoder =
