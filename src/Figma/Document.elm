@@ -331,9 +331,9 @@ type alias Text =
     , strokeWeight : Float
     , strokeAlign : StrokeAlign
     , characters : String
-    , style : TypeStyle
+    , style : TextStyle
     , characterStyleOverrides : List Int
-    , styleOverrides : Dict Int TypeStyleOverride 
+    , styleOverrides : Dict Int TextStyleOverride
     }
 
 

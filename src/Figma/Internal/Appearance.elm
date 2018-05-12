@@ -4,7 +4,7 @@ module Figma.Internal.Appearance
         , effectDecoder
         , shadowDecoder
         , blurDecoder
-        , typeStyleDecoder
+        , textStyleDecoder
         , styleOverrideDecoder
         , verticalAlignDecoder
         , horizontalAlignDecoder
@@ -141,12 +141,12 @@ blurDecoder =
 
 
 
--- TYPE
+-- TYPOGRAPHY
 
 
-typeStyleDecoder : Decoder TypeStyle
-typeStyleDecoder =
-    D.decode TypeStyle
+textStyleDecoder : Decoder TextStyle
+textStyleDecoder =
+    D.decode TextStyle
         |> D.required "fontFamily" D.string
         |> D.required "fontPostScriptName" D.string
         |> D.optional "italic" D.bool False
@@ -160,9 +160,9 @@ typeStyleDecoder =
         |> D.required "lineHeightPercent" D.float
 
 
-typeStyleOverrideDecoder : Decoder TypeStyleOverride
+typeStyleOverrideDecoder : Decoder TextStyleOverride
 typeStyleOverrideDecoder =
-    D.decode TypeStyleOverride
+    D.decode TextStyleOverride
         |> D.optional "fontFamily" (D.maybe D.string) Nothing
         |> D.optional "fontPostScriptName" (D.maybe D.string) Nothing
         |> D.optional "italic" (D.maybe D.bool) Nothing
@@ -176,7 +176,7 @@ typeStyleOverrideDecoder =
         |> D.optional "lineHeightPercent" (D.maybe D.float) Nothing
 
 
-styleOverrideDecoder : Decoder (Dict Int TypeStyleOverride)
+styleOverrideDecoder : Decoder (Dict Int TextStyleOverride)
 styleOverrideDecoder =
     let
         toInt =

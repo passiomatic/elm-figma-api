@@ -13,27 +13,24 @@ module Figma.Appearance
         , Gradient
         , Image
         , ColorStop
-        , TypeStyle
-        , TypeStyleOverride
+        , TextStyle
+        , TextStyleOverride
         )
 
 {-|
 
 
-# Visual appearance
-
-
-##  Fills and strokes
+# Fills and strokes
 
 @docs StrokeAlign, Paint, SolidColor, Image, ScaleMode, Gradient, ColorStop
 
 
-## Text styling
+# Text styling
 
-@docs TypeStyle, TypeStyleOverride, TextHorizontalAlign, TextVerticalAlign
+@docs TextStyle, TextStyleOverride, TextHorizontalAlign, TextVerticalAlign
 
 
-## Blending modes and effetcs
+# Blending modes and effetcs
 
 @docs BlendMode, Effect, Blur, Shadow
 
@@ -129,7 +126,7 @@ type TextHorizontalAlign
 
 {-| Character formatting.
 -}
-type alias TypeStyle =
+type alias TextStyle =
     { fontFamily : String
     , fontPostScriptName : String
     , isItalic : Bool
@@ -140,15 +137,17 @@ type alias TypeStyle =
     , letterSpacing : Float
     , fills : List Paint
     , lineHeightPx : Float
-    , lineHeightPercent : Float  
+    , lineHeightPercent : Float
     }
+
 
 {-| Character formatting overrides.
 
-Only relevant fields are set while specifying an override. All other fields are supposed 
-to be found in the master `TypeStyle` record.
+Only relevant fields are set while specifying an override. All other fields are supposed
+to be found in the master `TextStyle` record.
+
 -}
-type alias TypeStyleOverride =
+type alias TextStyleOverride =
     { fontFamily : Maybe String
     , fontPostScriptName : Maybe String
     , isItalic : Maybe Bool
@@ -159,8 +158,9 @@ type alias TypeStyleOverride =
     , letterSpacing : Maybe Float
     , fills : Maybe (List Paint)
     , lineHeightPx : Maybe Float
-    , lineHeightPercent : Maybe Float  
+    , lineHeightPercent : Maybe Float
     }
+
 
 
 -- STROKE ALIGN

@@ -17,6 +17,7 @@ module Figma.Layout
 
 @docs LayoutHorizontalConstraint, LayoutVerticalConstraint
 
+
 # Grids
 
 @docs LayoutGrid, Columns, Rows, Grid, GridHorizontalAlign, GridVerticalAlign
@@ -25,23 +26,27 @@ module Figma.Layout
 
 import Color exposing (Color)
 
+
 {-| -}
 type LayoutGrid
     = ColumnsGrid Columns
     | RowsGrid Rows
     | SquareGrid Grid
 
-{-| -}
-type GridVerticalAlign
-    = TopAlign 
-    | BottomAlign 
-    | CenterVerticalAlign
 
 {-| -}
-type GridHorizontalAlign 
-    = LeftAlign 
-    | RightAlign 
+type GridVerticalAlign
+    = TopAlign
+    | BottomAlign
+    | CenterVerticalAlign
+
+
+{-| -}
+type GridHorizontalAlign
+    = LeftAlign
+    | RightAlign
     | CenterHorizontalAlign
+
 
 {-| -}
 type alias Columns =
@@ -54,6 +59,7 @@ type alias Columns =
     , align : GridHorizontalAlign
     }
 
+
 {-| -}
 type alias Rows =
     { height : Float
@@ -65,13 +71,13 @@ type alias Rows =
     , align : GridVerticalAlign
     }
 
+
 {-| -}
 type alias Grid =
-    { width : Float  -- TODO : Size
+    { width : Float -- TODO : Size
     , isVisible : Bool
     , color : Color
     }
-
 
 
 {-| Vertical constraint relative to containing frame.

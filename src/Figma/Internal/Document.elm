@@ -223,7 +223,7 @@ textDecoder =
         |> sharedNodeFields
         |> vectorNodeFields
         |> D.required "characters" D.string
-        |> D.required "style" typeStyleDecoder
+        |> D.required "style" textStyleDecoder
         |> D.required "characterStyleOverrides" (D.list D.int)
         |> D.required "styleOverrideTable" styleOverrideDecoder
 

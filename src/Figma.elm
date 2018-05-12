@@ -3,38 +3,32 @@ module Figma
         ( personalToken
         , oauth2Token
         , getFile
-        -- getFileWithOptions
-        -- getFileVersions
-        , getProjectFiles
-        , getTeamProjects
+          -- getFileWithOptions
+          -- getVersions
+        , getFiles
+        , getProjects
         , getComments
         , postComment
-        , exportPng
-        , exportJpeg
-        , exportSvg
-        , exportWithOptions
+        , exportNodesAsPng
+        , exportNodesAsJpeg
+        , exportNodesAsSvg
+        , exportNodesWithOptions
         , AuthenticationToken
         , ProjectId
         , TeamId
         , Project
-        , FileInfo
+        , FileMeta
         , FileKey
-        , ComponentInfo
-        , FileResponse
-        , ExportResponse
+        , ComponentMeta
+        , File  
+        , ExportedImage
         , User
         , Comment(..)
         , CommentData
         , ReplyData
         )
 
-{-| This package aims to provide a typed, Elm-friendly access to the Figma web API.
-
-The API currently supports view-level operations on Figma files. Given a file, you can inspect an Elm representation
-of it or export any node subtree within the file as an image. Future versions of the API will unlock greater functionality,
-but the file object will remain at the heart of it.
-
-[Read the orginal Figma API specification](https://www.figma.com/developers/docs).
+{-| This module provides end points for the Figma web API.
 
 
 # Authentication
@@ -44,7 +38,7 @@ but the file object will remain at the heart of it.
 
 # Obtain a file
 
-@docs FileKey, getFile, FileResponse, ComponentInfo
+@docs FileKey, getFile, File, ComponentMeta
 
 
 # Read and post comments
@@ -54,17 +48,17 @@ but the file object will remain at the heart of it.
 
 # Export a file into other formats
 
-@docs exportPng, exportJpeg, exportSvg, exportWithOptions, ExportResponse
+@docs exportNodesAsPng, exportNodesAsJpeg, exportNodesAsSvg, exportNodesWithOptions, ExportedImage
 
 
 # Obtain a list of team projects
 
-@docs TeamId, getTeamProjects, Project
+@docs TeamId, getProjects, Project
 
 
 # Obtain the files of a single project
 
-@docs ProjectId, getProjectFiles, FileInfo
+@docs ProjectId, getFiles, FileMeta
 
 -}
 
@@ -125,7 +119,7 @@ baseUrl =
 
 {-| A file key which univocally identifies Figma document on the server.
 
-**Note**: The *file key* can be extracted from any Figma file URL: `https://www.figma.com/file/:key/:title`, or via the `getProjectFiles` function.
+**Note**: The *file key* can be extracted from any Figma file URL: `https://www.figma.com/file/:key/:title`, or via the `getFiles` function.
 
 -}
 type alias FileKey =
@@ -133,7 +127,7 @@ type alias FileKey =
 
 
 {-| Send a web request and return the file referred by *key* by storing it
-into a `FileResponse` record.
+into a `File` record.
 
     import Figma as F
 
@@ -143,7 +137,7 @@ into a `FileResponse` record.
         FileReceived
 
 -}
-getFile : AuthenticationToken -> FileKey -> (Result Http.Error FileResponse -> msg) -> Cmd msg
+getFile : AuthenticationToken -> FileKey -> (Result Http.Error File -> msg) -> Cmd msg
 getFile token fileKey msg =
     Http.send msg <|
         getFileRequest token fileKey
@@ -160,7 +154,7 @@ getFile token fileKey msg =
            |> Http.toTask
 
 -}
-getFileRequest : AuthenticationToken -> FileKey -> Http.Request FileResponse
+getFileRequest : AuthenticationToken -> FileKey -> Http.Request File
 getFileRequest token fileKey =
     let
         url =
@@ -171,51 +165,51 @@ getFileRequest token fileKey =
             , headers = [ authHeader token ]
             , url = url
             , body = Http.emptyBody
-            , expect = Http.expectJson fileResponseDecoder
+            , expect = Http.expectJson fileDataDecoder
             , timeout = Nothing
             , withCredentials = False
             }
 
 
-{-| The document data returned by the server. In particular:
+{-| The file data returned by the server. In particular:
 
   - `document` is the root node of the document.
   - `components` is a mapping from node IDs to component metadata. This helps you determine
     which components each instance comes from.
 
 -}
-type alias FileResponse =
+type alias File =
     { schemaVersion : Int
     , name : String
     , thumbnailUrl : String
     , lastModified : Date
     , document : Tree
-    , components : Dict NodeId ComponentInfo
+    , components : Dict NodeId ComponentMeta
     }
 
 
-fileResponseDecoder : Decoder FileResponse
-fileResponseDecoder =
-    D.decode FileResponse
+fileDataDecoder : Decoder File
+fileDataDecoder =
+    D.decode File
         |> D.required "schemaVersion" D.int
         |> D.required "name" D.string
         |> D.required "thumbnailUrl" D.string
         |> D.required "lastModified" dateDecoder
         |> D.required "document" treeDecoder
-        |> D.required "components" (D.dict componentDescriptionDecoder)
+        |> D.required "components" (D.dict componentMetaDecoder)
 
 
-{-| Metadata for a master component. 
+{-| Meta data for a master component. Component data is stored in a `Document.Component` record.
 -}
-type alias ComponentInfo =
+type alias ComponentMeta =
     { name : String
     , description : String
     }
 
 
-componentDescriptionDecoder : Decoder ComponentInfo
-componentDescriptionDecoder =
-    D.decode ComponentInfo
+componentMetaDecoder : Decoder ComponentMeta
+componentMetaDecoder =
+    D.decode ComponentMeta
         |> D.required "name" D.string
         |> D.required "description" D.string
 
@@ -234,7 +228,7 @@ getComments token fileKey msg =
                 , headers = [ authHeader token ]
                 , url = url
                 , body = Http.emptyBody
-                , expect = Http.expectJson commentsResponseDecoder
+                , expect = Http.expectJson commentsDecoder
                 , timeout = Nothing
                 , withCredentials = False
                 }
@@ -280,9 +274,9 @@ type alias TeamId =
     String
 
 
-{-| Metadata for a project file.
+{-| Meta data for a project file.
 -}
-type alias FileInfo =
+type alias FileMeta =
     { key : FileKey
     , name : String
     , thumbnailUrl : String
@@ -300,8 +294,8 @@ type alias Project =
 
 {-| Send a web request and return the list of files of the given project.
 -}
-getProjectFiles : AuthenticationToken -> ProjectId -> (Result Http.Error (List FileInfo) -> msg) -> Cmd msg
-getProjectFiles token projectId msg =
+getFiles : AuthenticationToken -> ProjectId -> (Result Http.Error (List FileMeta) -> msg) -> Cmd msg
+getFiles token projectId msg =
     let
         url =
             baseUrl ++ "/v1/projects/" ++ (toString projectId) ++ "/files"
@@ -318,14 +312,14 @@ getProjectFiles token projectId msg =
                 }
 
 
-projectFilesDecoder : Decoder (List FileInfo)
+projectFilesDecoder : Decoder (List FileMeta)
 projectFilesDecoder =
-    D.field "files" (D.list projectFileDecoder)
+    D.field "files" (D.list fileMetaDecoder)
 
 
-projectFileDecoder : Decoder FileInfo
-projectFileDecoder =
-    D.decode FileInfo
+fileMetaDecoder : Decoder FileMeta
+fileMetaDecoder =
+    D.decode FileMeta
         |> D.required "key" D.string
         |> D.required "name" D.string
         |> D.required "thumbnail_url" D.string
@@ -338,8 +332,8 @@ Note that this will only return projects visible to the authenticated user
 or owner of the developer token.
 
 -}
-getTeamProjects : AuthenticationToken -> TeamId -> (Result Http.Error (List Project) -> msg) -> Cmd msg
-getTeamProjects token teamId msg =
+getProjects : AuthenticationToken -> TeamId -> (Result Http.Error (List Project) -> msg) -> Cmd msg
+getProjects token teamId msg =
     let
         url =
             baseUrl ++ "/v1/teams/" ++ teamId ++ "/projects"
@@ -374,57 +368,57 @@ projectDecoder =
 
 {-| Export a list of document nodes into PNG files at 1x resolution.
 
-If you need to specify a different scale value use `exportWithOptions`.
+If you need to specify a different scale value use `exportNodesWithOptions`.
 
 -}
-exportPng : AuthenticationToken -> FileKey -> (Result Http.Error ExportResponse -> msg) -> List NodeId -> Cmd msg
-exportPng token fileKey msg ids =
+exportNodesAsPng : AuthenticationToken -> FileKey -> (Result Http.Error (List ExportedImage) -> msg) -> List NodeId -> Cmd msg
+exportNodesAsPng token fileKey msg ids =
     let
         options =
             { format = PngFormat, scale = 1.0 }
     in
-        exportWithOptions token fileKey msg ids options
+        exportNodesWithOptions token fileKey msg ids options
 
 
 {-| Export a list of document nodes into JPEG files at 1x resolution.
 
-If you need to specify a different scale value use `exportWithOptions`.
+If you need to specify a different scale value use `exportNodesWithOptions`.
 
 -}
-exportJpeg : AuthenticationToken -> FileKey -> (Result Http.Error ExportResponse -> msg) -> List NodeId -> Cmd msg
-exportJpeg token fileKey msg ids =
+exportNodesAsJpeg : AuthenticationToken -> FileKey -> (Result Http.Error (List ExportedImage) -> msg) -> List NodeId -> Cmd msg
+exportNodesAsJpeg token fileKey msg ids =
     let
         options =
             { format = JpegFormat, scale = 1.0 }
     in
-        exportWithOptions token fileKey msg ids options
+        exportNodesWithOptions token fileKey msg ids options
 
 
 {-| Export a list of document nodes into SVG files at 1x resolution.
 
-If you need to specify a different scale value use `exportWithOptions`.
+If you need to specify a different scale value use `exportNodesWithOptions`.
 
 -}
-exportSvg : AuthenticationToken -> FileKey -> (Result Http.Error ExportResponse -> msg) -> List NodeId -> Cmd msg
-exportSvg token fileKey msg ids =
+exportNodesAsSvg : AuthenticationToken -> FileKey -> (Result Http.Error (List ExportedImage) -> msg) -> List NodeId -> Cmd msg
+exportNodesAsSvg token fileKey msg ids =
     let
         options =
             { format = SvgFormat, scale = 1.0 }
     in
-        exportWithOptions token fileKey msg ids options
+        exportNodesWithOptions token fileKey msg ids options
 
 
 {-| Export a list of document nodes into the given `format` files using
 the given `scale` factor automatically clamped within the 0.01–4 range.
 -}
-exportWithOptions :
+exportNodesWithOptions :
     AuthenticationToken
     -> FileKey
-    -> (Result Http.Error ExportResponse -> msg)
+    -> (Result Http.Error (List ExportedImage) -> msg)
     -> List NodeId
     -> { format : ExportFormat, scale : Float }
     -> Cmd msg
-exportWithOptions token fileKey msg ids options =
+exportNodesWithOptions token fileKey msg ids options =
     let
         format =
             formatToString options.format
@@ -452,7 +446,7 @@ exportWithOptions token fileKey msg ids options =
                 , headers = [ authHeader token ]
                 , url = url
                 , body = Http.emptyBody
-                , expect = Http.expectJson exportResponseDecoder
+                , expect = Http.expectJson exportDataDecoder
                 , timeout = Nothing
                 , withCredentials = False
                 }
@@ -470,28 +464,19 @@ formatToString format =
             "svg"
 
 
-{-| The response is populated with a list of tuples made of node ID's and URL's of the rendered images.
+{-| A tuple made of the node ID and the image URL of its rendered representation.
 
-The `Nothing` values indicate that rendering of that specific node has failed. This may be due to
+A `Nothing` value indicates that rendering of the specific node has failed. This may be due to
 the node id not existing, or other reasons such has the node having no renderable components.
 
-It is guaranteed that any node that was requested for rendering will be represented in this
-map whether or not the render succeeded.
-
 -}
-type alias ExportResponse =
-    List ( NodeId, Maybe String )
+type alias ExportedImage =
+    ( NodeId, Maybe String )
 
 
-exportResponseDecoder : Decoder ExportResponse
-exportResponseDecoder =
-    D.field "images"
-        (D.keyValuePairs (D.nullable D.string)
-         -- |> D.andThen
-         --     (\value ->
-         --         D.succeed <| value -- Dict.fromList value
-         --     )
-        )
+exportDataDecoder : Decoder (List ExportedImage)
+exportDataDecoder =
+    D.field "images" (D.keyValuePairs (D.nullable D.string))
 
 
 
@@ -532,8 +517,8 @@ type alias ReplyData =
     }
 
 
-commentsResponseDecoder : Decoder (List Comment)
-commentsResponseDecoder =
+commentsDecoder : Decoder (List Comment)
+commentsDecoder =
     D.field "comments"
         (D.list
             (D.oneOf
