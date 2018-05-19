@@ -4,7 +4,11 @@ This package aims to provide a typed, Elm-friendly access to the Figma web API.
 
 The API currently supports view-level operations on Figma files. Given a file, you can inspect its Elm representation, read or post comments, or export a rendered image of any node subtree. 
 
-[Read the orginal Figma API specification](https://www.figma.com/developers/docs).
+## Live "Swatches" example
+
+The example below fetches a given Figma file and collects all the found colors and gradients used as background or paint fills. 
+
+[live example][1] and [sources][2]
 
 ## Get a document file
 
@@ -52,3 +56,6 @@ Once finished the `ExportFinished` message will contain a list of `ExportedImage
 * Export geometry data
 
 If you need any of these features please open an issue.
+
+[1]: http://lab.passiomatic.com/swatches/
+[2]: https://github.com/passiomatic/elm-figma-api/examples/swatches
