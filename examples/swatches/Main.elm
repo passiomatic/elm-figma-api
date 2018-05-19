@@ -259,9 +259,7 @@ formPanelView isLoading model =
             [ H.text "This page fetches a Figma file using the "
             , H.a [ A.href "https://github.com/passiomatic/elm-figma-api" ]
                 [ H.text "elm-figma-api package" ]
-            , H.text " and collects all the found colors and gradients used as background or ‘paint fills’. "
-            , H.br [] [], H.a [ A.class "", A.href "https://github.com/passiomatic/elm-figma-api/examples/swatches" ]
-                [ H.text "Check out the source code on Github" ]
+            , H.text " and collects all the found colors and gradients used as background or ‘paint fills’."
             ]
         , H.hr []
             []

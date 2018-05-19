@@ -8,7 +8,7 @@ The API currently supports view-level operations on Figma files. Given a file, y
 
 The example below fetches a given Figma file and collects all the found colors and gradients used as background or paint fills. 
 
-[live example][1] and [sources][2]
+[Try it now][1] and [view source][2]
 
 ## Get a document file
 
