@@ -58,4 +58,4 @@ Once finished the `ExportFinished` message will contain a list of `ExportedImage
 If you need any of these features please open an issue.
 
 [1]: http://lab.passiomatic.com/swatches/
-[2]: https://github.com/passiomatic/elm-figma-api/examples/swatches
+[2]: https://github.com/passiomatic/elm-figma-api/tree/master/examples/swatches
