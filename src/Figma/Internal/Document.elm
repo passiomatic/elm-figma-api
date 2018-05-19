@@ -258,7 +258,7 @@ exportFormatDecoder =
         |> D.andThen
             (\value ->
                 case value of
-                    "JPG" ->
+                    "JPEG" ->
                         D.succeed JpegFormat
 
                     "PNG" ->
