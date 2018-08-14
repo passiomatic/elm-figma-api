@@ -67,7 +67,8 @@ update msg model =
                 ( { model
                     | swatches = RemoteData.Loading
                   }
-                , Figma.getFile authToken (String.trim model.fileKey) FileReceived
+                , Figma.getFile authToken (String.trim model.fileKey)
+                    |> Http.send FileReceived
                 )
 
         FileReceived result ->
@@ -156,7 +157,7 @@ swatches document =
                 Document.RectangleNode rectangle ->
                     (fills rectangle) ++ swatches
 
-                Document.BooleanOperation vector ->
+                Document.BooleanGroupNode vector ->
                     (fills vector) ++ swatches
 
                 Document.TextNode text ->

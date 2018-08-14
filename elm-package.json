@@ -1,5 +1,5 @@
 {
-    "version": "1.0.1",
+    "version": "2.0.0",
     "summary": "Figma web API endpoints, data structures and helper functions.",
     "repository": "https://github.com/passiomatic/elm-figma-api.git",
     "license": "MIT",
