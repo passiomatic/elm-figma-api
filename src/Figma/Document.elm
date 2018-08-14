@@ -7,6 +7,7 @@ module Figma.Document
         , Canvas
         , Frame
         , Group
+        , BooleanGroup
         , Vector
         , Rectangle
         , Slice
@@ -16,6 +17,7 @@ module Figma.Document
         , ExportFormat(..)
         , ExportConstraint(..)
         , ExportSetting
+        , BooleanOperation(..)
         , singleton
         , tree
         , node
@@ -30,7 +32,7 @@ and functions which operate on it.
 
 # Document node types
 
-@docs Node, Tree, NodeId, Document, Canvas, Frame, Group, Vector, Rectangle, Slice, Text, Component, Instance
+@docs Node, Tree, NodeId, Document, Canvas, Frame, Group, BooleanGroup, BooleanOperation, Vector, Rectangle, Slice, Text, Component, Instance
 
 
 # Export constraints and settings
@@ -135,13 +137,13 @@ type Node
     | CanvasNode Canvas
     | FrameNode Frame
     | GroupNode Group
+    | BooleanGroupNode BooleanGroup
     | VectorNode Vector
     | StarNode Vector
     | LineNode Vector
     | EllipseNode Vector
     | RegularPolygonNode Vector
     | RectangleNode Rectangle
-    | BooleanOperation Vector
     | SliceNode Slice
     | TextNode Text
     | ComponentNode Component
@@ -232,6 +234,43 @@ type alias Group =
     , effects : List Effect
     , isMask : Bool
     }
+
+
+
+-- BOOLEAN
+
+
+{-| A group that has a boolean operation (union, intersection, subtraction and exlusion) applied to it.
+-}
+type alias BooleanGroup =
+    { id : NodeId
+    , name : String
+    , isVisible : Bool
+    , exportSettings : List ExportSetting
+    , blendMode : BlendMode
+    , preserveRatio : Bool
+    , horizontalConstraint : LayoutHorizontalConstraint
+    , verticalConstraint : LayoutVerticalConstraint
+    , transitionTo : Maybe NodeId
+    , opacity : Float
+    , boundingBox : BoundingBox
+    , effects : List Effect
+    , isMask : Bool
+    , fills : List Paint
+    , strokes : List Paint
+    , strokeWeight : Float
+    , strokeAlign : StrokeAlign
+    , operation : BooleanOperation
+    }
+
+
+{-| Type of boolean operation applied to the boolean group children.
+-}
+type BooleanOperation
+    = UnionOperation
+    | IntersectOperation
+    | SubtractOperation
+    | ExcludeOperation
 
 
 

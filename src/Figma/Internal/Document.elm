@@ -70,7 +70,7 @@ treeDecoder =
                         D.map singleton (D.map InstanceNode instanceDecoder)
 
                     "BOOLEAN_OPERATION" ->
-                        D.map2 tree (D.map BooleanOperation vectorDecoder) childrenDecoder
+                        D.map2 tree (D.map BooleanGroupNode booleanGroupDecoder) childrenDecoder
 
                     _ ->
                         D.fail <| "Unsupported node type: " ++ value
@@ -155,9 +155,44 @@ groupDecoder =
         |> D.optional "opacity" D.float 1
         |> D.required "absoluteBoundingBox" boundingBoxDecoder
         |> D.required "clipsContent" D.bool
-        |> D.optional "layoutGrids" (D.list gridDecoder) []        
+        |> D.optional "layoutGrids" (D.list gridDecoder) []
         |> D.optional "effects" (D.list effectDecoder) []
         |> D.optional "isMask" D.bool False
+
+
+
+-- BOOLEAN
+
+
+booleanGroupDecoder : Decoder BooleanGroup
+booleanGroupDecoder =
+    D.decode BooleanGroup
+        |> sharedNodeFields
+        |> vectorNodeFields
+        |> D.required "booleanOperation" booleanOperationDecoder
+
+
+booleanOperationDecoder : Decoder BooleanOperation
+booleanOperationDecoder =
+    D.string
+        |> D.andThen
+            (\value ->
+                case value of
+                    "UNION" ->
+                        D.succeed UnionOperation
+
+                    "INTERSECT" ->
+                        D.succeed IntersectOperation
+
+                    "SUBTRACT" ->
+                        D.succeed SubtractOperation
+
+                    "EXCLUDE" ->
+                        D.succeed ExcludeOperation
+
+                    value ->
+                        D.fail <| "Unrecognized boolean operation value: " ++ value
+            )
 
 
 
@@ -173,7 +208,6 @@ vectorNodeFields =
         >> D.optional "transitionNodeID" (D.nullable D.string) Nothing
         >> D.optional "opacity" D.float 1
         >> D.required "absoluteBoundingBox" boundingBoxDecoder
-        --|> D.optional "layoutGrids" D.list  TODO
         >> D.optional "effects" (D.list effectDecoder) []
         >> D.optional "isMask" D.bool False
         >> D.optional "fills" (D.list paintDecoder) []

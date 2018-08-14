@@ -3,9 +3,9 @@ module Figma
         ( personalToken
         , oauth2Token
         , getFile
-          -- getFileWithOptions
-          -- getVersions
         , getFiles
+        , getVersions
+        , getFileWithVersion  
         , getProjects
         , getComments
         , postComment
@@ -19,8 +19,10 @@ module Figma
         , Project
         , FileMeta
         , FileKey
+        , VersionId
         , ComponentMeta
-        , File  
+        , File
+        , Version
         , ExportedImage
         , User
         , Comment(..)
@@ -28,7 +30,7 @@ module Figma
         , ReplyData
         )
 
-{-| This module provides end points for the Figma web API.
+{-| This module provides endpoints for the Figma web API.
 
 
 # Authentication
@@ -36,29 +38,29 @@ module Figma
 @docs AuthenticationToken, personalToken, oauth2Token
 
 
-# Obtain a file
+# Document file and versions
 
-@docs FileKey, getFile, File, ComponentMeta
-
-
-# Read and post comments
-
-@docs getComments, postComment, Comment, CommentData, ReplyData, User
+@docs FileKey, File, getFile, ComponentMeta, VersionId, Version, getVersions, getFileWithVersion
 
 
-# Export a file into other formats
+# Comments
+
+@docs Comment, CommentData, ReplyData, getComments, postComment
+
+
+# Export document nodes
 
 @docs exportNodesAsPng, exportNodesAsJpeg, exportNodesAsSvg, exportNodesWithOptions, ExportedImage
 
 
-# Obtain a list of team projects
+# Team projects and files
 
-@docs TeamId, getProjects, Project
+@docs TeamId, ProjectId, Project, getProjects, getFiles, FileMeta
 
 
-# Obtain the files of a single project
+# User
 
-@docs ProjectId, getFiles, FileMeta
+@docs User
 
 -}
 
@@ -119,43 +121,47 @@ baseUrl =
 
 {-| A file key which univocally identifies Figma document on the server.
 
-**Note**: The *file key* can be extracted from any Figma file URL: `https://www.figma.com/file/:key/:title`, or via the `getFiles` function.
+**Note**: The *file key* can be extracted from any Figma file URL: `https://www.figma.com/file/:key/:title`, or via the [`getFiles`][#getFiles] function.
 
 -}
 type alias FileKey =
     String
 
 
-{-| Send a web request and return the file referred by *key* by storing it
-into a `File` record.
+{-| Construct a web request to return the latest version of the file referred by *key* and store it into a `File` record.
 
+    import Http
     import Figma as F
 
-    F.getFile
-        ( F.personalToken "your-token" )
-        "your-file-key"
-        FileReceived
+    F.getFile ( F.personalToken "your-token" ) "your-file-key"
+        |> Http.send FileReceived
+
+Alternatively `getFile` can be chained together with another request (or any other task) resulting in a single command.
+
+    F.getFile ( F.personalToken "your-token" ) "your-file-key"
+        |> Http.toTask
+        |> Task.andThen
+            (\file ->
+                let
+                    options =
+                        { format = Document.JpegFormat
+                        , scale = 1.0
+                        }
+
+                    nodeIds =
+                        -- Extract your node ID's from file.document here
+                in
+                    F.exportNodesWithOptions authToken fileKey options nodeIds
+                        |> Http.toTask
+            )
+        |> Task.attempt NodesExported
 
 -}
-getFile : AuthenticationToken -> FileKey -> (Result Http.Error File -> msg) -> Cmd msg
-getFile token fileKey msg =
-    Http.send msg <|
-        getFileRequest token fileKey
-
-
-{-| This is useful if you need to chain together a bunch of requests
-(or any other tasks) in a single command.
-
-       import Http
-
-       getFileRequest
-           ( personalToken "your-token" )
-           "your-file-key"
-           |> Http.toTask
-
--}
-getFileRequest : AuthenticationToken -> FileKey -> Http.Request File
-getFileRequest token fileKey =
+getFile :
+    AuthenticationToken
+    -> FileKey
+    -> Http.Request File
+getFile token fileKey =
     let
         url =
             baseUrl ++ "/v1/files/" ++ fileKey
@@ -165,7 +171,7 @@ getFileRequest token fileKey =
             , headers = [ authHeader token ]
             , url = url
             , body = Http.emptyBody
-            , expect = Http.expectJson fileDataDecoder
+            , expect = Http.expectJson fileDecoder
             , timeout = Nothing
             , withCredentials = False
             }
@@ -174,13 +180,13 @@ getFileRequest token fileKey =
 {-| The file data returned by the server. In particular:
 
   - `document` is the root node of the document.
-  - `components` is a mapping from node IDs to component metadata. This helps you determine
+  - `components` is a mapping from node ID's to component metadata. This helps you determine
     which components each instance comes from.
 
 -}
 type alias File =
     { schemaVersion : Int
-    , name : String
+    --, name : String  
     , thumbnailUrl : String
     , lastModified : Date
     , document : Tree
@@ -188,18 +194,18 @@ type alias File =
     }
 
 
-fileDataDecoder : Decoder File
-fileDataDecoder =
+fileDecoder : Decoder File
+fileDecoder =
     D.decode File
         |> D.required "schemaVersion" D.int
-        |> D.required "name" D.string
+        --|> D.required "name" D.string 
         |> D.required "thumbnailUrl" D.string
         |> D.required "lastModified" dateDecoder
         |> D.required "document" treeDecoder
         |> D.required "components" (D.dict componentMetaDecoder)
 
 
-{-| Meta data for a master component. Component data is stored in a `Document.Component` record.
+{-| Metadata for a master component. Component data is stored in a `Document.Component` record.
 -}
 type alias ComponentMeta =
     { name : String
@@ -214,31 +220,123 @@ componentMetaDecoder =
         |> D.required "description" D.string
 
 
-{-| Send a web request and return a list of comments left on the document.
+
+-- VERSION
+
+
+{-| Unique identifier for file version.
 -}
-getComments : AuthenticationToken -> FileKey -> (Result Http.Error (List Comment) -> msg) -> Cmd msg
-getComments token fileKey msg =
+type alias VersionId =
+    String
+
+
+{-| A version of a file.
+-}
+type alias Version =
+    { id : String
+    , createdAt : Date
+    , label : String
+    , description : String
+    , user : User
+    }
+
+
+{-| Construct a web request to return specific file version.
+-}
+getFileWithVersion :
+    AuthenticationToken
+    -> FileKey
+    -> VersionId
+    -> Http.Request File
+getFileWithVersion token fileKey versionId =
+    let
+        url =
+            baseUrl ++ "/v1/files/" ++ fileKey ++ "?version=" ++ versionId
+    in
+        Http.request
+            { method = "GET"
+            , headers = [ authHeader token ]
+            , url = url
+            , body = Http.emptyBody
+            , expect = Http.expectJson fileDecoder
+            , timeout = Nothing
+            , withCredentials = False
+            }
+
+
+{-| Construct a web request to list the version history of a file. The version history
+consists of versions, manually-saved additions to the version history of a file. If the
+account is not on a paid team, version history is limited to the past 30 days.
+
+Note that version history will not include autosaved versions.
+
+-}
+getVersions :
+    AuthenticationToken
+    -> FileKey
+    -> Http.Request (List Version)
+getVersions token fileKey =
+    let
+        url =
+            baseUrl ++ "/v1/files/" ++ fileKey ++ "/versions"
+    in
+        Http.request
+            { method = "GET"
+            , headers = [ authHeader token ]
+            , url = url
+            , body = Http.emptyBody
+            , expect = Http.expectJson versionsDecoder
+            , timeout = Nothing
+            , withCredentials = False
+            }
+
+
+versionsDecoder : Decoder (List Version)
+versionsDecoder =
+    D.field "versions" (D.list versionDecoder)
+
+
+versionDecoder : Decoder Version
+versionDecoder =
+    D.decode Version
+        |> D.required "id" D.string
+        |> D.required "created_at" dateDecoder
+        |> D.required "label" D.string
+        |> D.required "description" D.string
+        |> D.required "user" userDecoder
+
+
+{-| Construct a web request to return a list of comments left on the document.
+-}
+getComments :
+    AuthenticationToken
+    -> FileKey
+    -> Http.Request (List Comment)
+getComments token fileKey =
     let
         url =
             baseUrl ++ "/v1/files/" ++ fileKey ++ "/comments"
     in
-        Http.send msg <|
-            Http.request
-                { method = "GET"
-                , headers = [ authHeader token ]
-                , url = url
-                , body = Http.emptyBody
-                , expect = Http.expectJson commentsDecoder
-                , timeout = Nothing
-                , withCredentials = False
-                }
+        Http.request
+            { method = "GET"
+            , headers = [ authHeader token ]
+            , url = url
+            , body = Http.emptyBody
+            , expect = Http.expectJson commentsDecoder
+            , timeout = Nothing
+            , withCredentials = False
+            }
 
 
-{-| Send a web request and add a new comment to the document.
+{-| Construct a web request to add a new comment to the document.
 Return the `Comment` that was successfully posted.
 -}
-postComment : AuthenticationToken -> FileKey -> (Result Http.Error Comment -> msg) -> { message : String, position : Position } -> Cmd msg
-postComment token fileKey msg comment =
+postComment :
+    AuthenticationToken
+    -> FileKey
+    -> { message : String, position : Position }
+    -> Http.Request Comment
+postComment token fileKey comment =
     let
         url =
             baseUrl
@@ -246,16 +344,15 @@ postComment token fileKey msg comment =
                 ++ fileKey
                 ++ "/comments"
     in
-        Http.send msg <|
-            Http.request
-                { method = "POST"
-                , headers = [ authHeader token ]
-                , url = url
-                , body = Http.jsonBody <| encodeComment comment
-                , expect = Http.expectJson commentDecoder
-                , timeout = Nothing
-                , withCredentials = False
-                }
+        Http.request
+            { method = "POST"
+            , headers = [ authHeader token ]
+            , url = url
+            , body = Http.jsonBody <| encodeComment comment
+            , expect = Http.expectJson commentDecoder
+            , timeout = Nothing
+            , withCredentials = False
+            }
 
 
 
@@ -274,7 +371,7 @@ type alias TeamId =
     String
 
 
-{-| Meta data for a project file.
+{-| Metadata for a project file.
 -}
 type alias FileMeta =
     { key : FileKey
@@ -292,28 +389,30 @@ type alias Project =
     }
 
 
-{-| Send a web request and return the list of files of the given project.
+{-| Construct a web request to return the list of files of the given project.
 -}
-getFiles : AuthenticationToken -> ProjectId -> (Result Http.Error (List FileMeta) -> msg) -> Cmd msg
-getFiles token projectId msg =
+getFiles :
+    AuthenticationToken
+    -> ProjectId
+    -> Http.Request (List FileMeta)
+getFiles token projectId =
     let
         url =
             baseUrl ++ "/v1/projects/" ++ (toString projectId) ++ "/files"
     in
-        Http.send msg <|
-            Http.request
-                { method = "GET"
-                , headers = [ authHeader token ]
-                , url = url
-                , body = Http.emptyBody
-                , expect = Http.expectJson projectFilesDecoder
-                , timeout = Nothing
-                , withCredentials = False
-                }
+        Http.request
+            { method = "GET"
+            , headers = [ authHeader token ]
+            , url = url
+            , body = Http.emptyBody
+            , expect = Http.expectJson filesDecoder
+            , timeout = Nothing
+            , withCredentials = False
+            }
 
 
-projectFilesDecoder : Decoder (List FileMeta)
-projectFilesDecoder =
+filesDecoder : Decoder (List FileMeta)
+filesDecoder =
     D.field "files" (D.list fileMetaDecoder)
 
 
@@ -326,28 +425,27 @@ fileMetaDecoder =
         |> D.required "last_modified" dateDecoder
 
 
-{-| Send a web request and return the list of projects of the given team.
+{-| Construct a web request and return the list of projects of the given team.
 
 Note that this will only return projects visible to the authenticated user
 or owner of the developer token.
 
 -}
-getProjects : AuthenticationToken -> TeamId -> (Result Http.Error (List Project) -> msg) -> Cmd msg
-getProjects token teamId msg =
+getProjects : AuthenticationToken -> TeamId -> Http.Request (List Project)
+getProjects token teamId =
     let
         url =
             baseUrl ++ "/v1/teams/" ++ teamId ++ "/projects"
     in
-        Http.send msg <|
-            Http.request
-                { method = "GET"
-                , headers = [ authHeader token ]
-                , url = url
-                , body = Http.emptyBody
-                , expect = Http.expectJson projectsDecoder
-                , timeout = Nothing
-                , withCredentials = False
-                }
+        Http.request
+            { method = "GET"
+            , headers = [ authHeader token ]
+            , url = url
+            , body = Http.emptyBody
+            , expect = Http.expectJson projectsDecoder
+            , timeout = Nothing
+            , withCredentials = False
+            }
 
 
 projectsDecoder : Decoder (List Project)
@@ -366,59 +464,70 @@ projectDecoder =
 -- EXPORT
 
 
-{-| Export a list of document nodes into PNG files at 1x resolution.
+{-| Construct a web request to export a list of document nodes into PNG files at 1x resolution.
 
 If you need to specify a different scale value use `exportNodesWithOptions`.
 
 -}
-exportNodesAsPng : AuthenticationToken -> FileKey -> (Result Http.Error (List ExportedImage) -> msg) -> List NodeId -> Cmd msg
-exportNodesAsPng token fileKey msg ids =
+exportNodesAsPng :
+    AuthenticationToken
+    -> FileKey
+    -> List NodeId
+    -> Http.Request (List ExportedImage)
+exportNodesAsPng token fileKey ids =
     let
         options =
             { format = PngFormat, scale = 1.0 }
     in
-        exportNodesWithOptions token fileKey msg ids options
+        exportNodesWithOptions token fileKey options ids
 
 
-{-| Export a list of document nodes into JPEG files at 1x resolution.
+{-| Construct a web request to export a list of document nodes into JPEG files at 1x resolution.
 
 If you need to specify a different scale value use `exportNodesWithOptions`.
 
 -}
-exportNodesAsJpeg : AuthenticationToken -> FileKey -> (Result Http.Error (List ExportedImage) -> msg) -> List NodeId -> Cmd msg
-exportNodesAsJpeg token fileKey msg ids =
+exportNodesAsJpeg :
+    AuthenticationToken
+    -> FileKey
+    -> List NodeId
+    -> Http.Request (List ExportedImage)
+exportNodesAsJpeg token fileKey ids =
     let
         options =
             { format = JpegFormat, scale = 1.0 }
     in
-        exportNodesWithOptions token fileKey msg ids options
+        exportNodesWithOptions token fileKey options ids
 
 
-{-| Export a list of document nodes into SVG files at 1x resolution.
+{-| Construct a web request to export a list of document nodes into SVG files at 1x resolution.
 
 If you need to specify a different scale value use `exportNodesWithOptions`.
 
 -}
-exportNodesAsSvg : AuthenticationToken -> FileKey -> (Result Http.Error (List ExportedImage) -> msg) -> List NodeId -> Cmd msg
-exportNodesAsSvg token fileKey msg ids =
+exportNodesAsSvg :
+    AuthenticationToken
+    -> FileKey
+    -> List NodeId
+    -> Http.Request (List ExportedImage)
+exportNodesAsSvg token fileKey ids =
     let
         options =
             { format = SvgFormat, scale = 1.0 }
     in
-        exportNodesWithOptions token fileKey msg ids options
+        exportNodesWithOptions token fileKey options ids
 
 
-{-| Export a list of document nodes into the given `format` files using
+{-| Construct a web request to export a list of document nodes into the given `format` files using
 the given `scale` factor automatically clamped within the 0.01–4 range.
 -}
 exportNodesWithOptions :
     AuthenticationToken
     -> FileKey
-    -> (Result Http.Error (List ExportedImage) -> msg)
-    -> List NodeId
     -> { format : ExportFormat, scale : Float }
-    -> Cmd msg
-exportNodesWithOptions token fileKey msg ids options =
+    -> List NodeId
+    -> Http.Request (List ExportedImage)
+exportNodesWithOptions token fileKey options ids =
     let
         format =
             formatToString options.format
@@ -440,16 +549,15 @@ exportNodesWithOptions token fileKey msg ids options =
                 ++ "&format="
                 ++ format
     in
-        Http.send msg <|
-            Http.request
-                { method = "GET"
-                , headers = [ authHeader token ]
-                , url = url
-                , body = Http.emptyBody
-                , expect = Http.expectJson exportDataDecoder
-                , timeout = Nothing
-                , withCredentials = False
-                }
+        Http.request
+            { method = "GET"
+            , headers = [ authHeader token ]
+            , url = url
+            , body = Http.emptyBody
+            , expect = Http.expectJson exportDataDecoder
+            , timeout = Nothing
+            , withCredentials = False
+            }
 
 
 formatToString format =
@@ -510,7 +618,7 @@ type alias ReplyData =
     { id : String
     , message : String
     , fileKey : FileKey
-    , parentId : String
+    , parentId : String -- TODO commentId
     , user : User
     , createdAt : Date
     , resolvedAt : Maybe Date
