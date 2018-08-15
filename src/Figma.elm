@@ -188,7 +188,7 @@ type alias File =
     { schemaVersion : Int
     --, name : String  
     , thumbnailUrl : String
-    , lastModified : Date
+    --, lastModified : Date
     , document : Tree
     , components : Dict NodeId ComponentMeta
     }
@@ -200,7 +200,7 @@ fileDecoder =
         |> D.required "schemaVersion" D.int
         --|> D.required "name" D.string 
         |> D.required "thumbnailUrl" D.string
-        |> D.required "lastModified" dateDecoder
+        --|> D.required "lastModified" dateDecoder
         |> D.required "document" treeDecoder
         |> D.required "components" (D.dict componentMetaDecoder)
 
