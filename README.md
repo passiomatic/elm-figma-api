@@ -64,7 +64,9 @@ Once finished the `ExportFinished` message will contain a list of `ExportedImage
 
 * Export geometry data
 * Prototype transitions and easing settings 
-* Styles
+* Styles (see https://www.figma.com/developers/docs#style-type)
+* Get specific nodes (see https://www.figma.com/developers/docs#nodes-endpoint)
+* Starting frame for prototypes (see https://www.figma.com/developers/docs#canvas-props)
 
 If you need any of these features please open an issue.
 
